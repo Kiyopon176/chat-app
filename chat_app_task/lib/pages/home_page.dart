@@ -1,8 +1,10 @@
 import 'package:chat_app_task/services/auth/auth_service.dart';
 import 'package:chat_app_task/services/chat/chat_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../widgets/my_chats_container.dart';
 import 'chat_page.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -81,7 +83,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildUserList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: chatService.getUserStream(),
+      stream: chatService.getUsersStream(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Center(child: CircularProgressIndicator());
@@ -99,15 +101,71 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildUserListItem(Map<String, dynamic> userData, BuildContext context) {
-    return MyChatsContainer(
-      contactName: userData['contactName'],
-      lastMessage: "Hello",
-      time: "2 minutes later",
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(
-          receiverEmail: userData['contactName'],
-        )));
-      },
-    );
+    if (userData['contactName'] != authService.getCurrentUser()!.email) {
+      return StreamBuilder<QuerySnapshot>(
+        stream: chatService.getMessages(authService.getCurrentUser()!.uid, userData['uid']),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return MyChatsContainer(
+              contactName: userData['contactName'],
+              lastMessage: "Loading...",
+              time: "",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatPage(
+                      receiverEmail: userData['contactName'],
+                      receiverId: userData['uid'],
+                    ),
+                  ),
+                );
+              },
+            );
+          }
+          if (snapshot.data!.docs.isNotEmpty) {
+            final lastMessageData = snapshot.data!.docs.last.data() as Map<String, dynamic>; // Change to get the last message
+            String lastMessage = lastMessageData['message'];
+            Timestamp timestamp = lastMessageData['timestamp'];
+            String time = DateFormat('dd.MM.yy HH:mm').format(timestamp.toDate());
+
+            return MyChatsContainer(
+              contactName: userData['contactName'],
+              lastMessage: lastMessage,
+              time: time,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatPage(
+                      receiverEmail: userData['contactName'],
+                      receiverId: userData['uid'],
+                    ),
+                  ),
+                );
+              },
+            );
+          } else {
+            return MyChatsContainer(
+              contactName: userData['contactName'],
+              lastMessage: "No messages yet",
+              time: "",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatPage(
+                      receiverEmail: userData['contactName'],
+                      receiverId: userData['uid'],
+                    ),
+                  ),
+                );
+              },
+            );
+          }
+        },
+      );
+    }
+    return Container();
   }
 }
