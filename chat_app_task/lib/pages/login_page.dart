@@ -1,4 +1,4 @@
-import 'package:chat_app_task/auth/auth_service.dart';
+import 'package:chat_app_task/services/auth/auth_service.dart';
 import 'package:chat_app_task/widgets/my_button.dart';
 import 'package:chat_app_task/widgets/my_textfield.dart';
 import 'package:firebase_auth/firebase_auth.dart';
